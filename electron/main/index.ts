@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
 import { update } from './update'
+import childProcess from 'child_process';
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
+let pidToKill = 0;
+const jarPath = path.join('demo-0.0.1-SNAPSHOT.jar');
 // The built directory structure
 //
 // ├─┬ dist-electron
@@ -81,11 +83,59 @@ async function createWindow() {
   update(win)
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  console.log("App ready");
+    const backendProcess = childProcess.spawn('java', ['-jar', jarPath]); // <-- Modified this line
+    if(!backendProcess) {
+      console.log("Backend not created");
+      try {
+        
+      } catch  (e){
+        console.log(e);
+      }
+    } else {
+      console.log("Backend created");
+    }
+    // let pidToKill = 0;
+    // Optional: Log child process output
+    backendProcess.stdout.on('data', (data) => {
+      const logMessage = data.toString(); // Convert the data to string
+      console.log("Backend Process stdout: " + logMessage);
+
+      //retrieve PID of child process from data 
+      if(pidToKill == 0) {
+        const match = logMessage.match(/INFO (\d+) ---/);
+        if (match) {
+          pidToKill = match[1];
+          console.log(pidToKill); 
+        } else {
+          console.error("PID not found in log message.");
+        }
+      }
+    });
+
+    backendProcess.stderr.on('data', (data) => {
+      console.error(`Backend process stderr: ${data}`);
+    });
+
+    backendProcess.on('exit', (code, signal) => {
+      console.log(`Backend process exited with code ${code} and signal ${signal}`);
+      // process.kill(backendProcess.pid);
+    });
+
+    backendProcess.on('error', (err) => {
+      console.error('Failed to start backend process:', err);
+    });
+  
+  createWindow();
+})
 
 app.on('window-all-closed', () => {
   win = null
-  if (process.platform !== 'darwin') app.quit()
+  if (process.platform !== 'darwin') {
+    process.kill(pidToKill);
+    app.quit();
+  }
 })
 
 app.on('second-instance', () => {

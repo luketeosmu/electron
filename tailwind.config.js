@@ -2,7 +2,7 @@
 export default {
   content: [
     './index.html',
-    './src/**/*.{js,ts,jsx,tsx}',
+    './src/**/*.{js,ts,jsx,tsx,jar}',
   ],
   theme: {
     extend: {},
@@ -10,5 +10,7 @@ export default {
   corePlugins: {
     preflight: false,
   },
-  plugins: [],
+  plugins: [
+    require('daisyui'),
+  ],
 }
